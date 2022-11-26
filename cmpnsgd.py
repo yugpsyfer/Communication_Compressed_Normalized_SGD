@@ -24,7 +24,7 @@ class NSGD(Optimizer):
 
             if nesterov and (momentum <= 0 or dampening != 0):
                 raise ValueError("Nesterov momentum requires a momentum and zero dampening")
-            super(self).__init__(params, defaults)
+            super().__init__(params, defaults)
 
             for group in self.param_groups:
                 for p in group['params']:
