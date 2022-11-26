@@ -6,8 +6,8 @@ class NSGD(Optimizer):
     def __init__(self, params, lr=required, momentum=0, dampening=0,
                     weight_decay=0, nesterov=False, memory=False):
             
-            self.P = 1
-            self.Q = 1
+            self.P = 0.9
+            self.Q = 0.1
             self.beta = 0.5
             self.rho=1
 
@@ -62,22 +62,19 @@ class NSGD(Optimizer):
                         d_p = d_p.add(momentum, buf)
                     else:
                         d_p = buf
-
-                # d_p corresponds to g in alg. 1 from the paper.
-                # param_state['gradient'] = d_p  # Save the gradient so its norm can be computed later
-
-                # d_p = group['lr'] * d_p
                 
                 corrected_gradient = param_state['memory'] + d_p
                 
-                corrected_gradient = self.__compress__(corrected_gradient)
-
+                corrected_gradient = torch.nan_to_num(self.__compress__(corrected_gradient))
                 
                 param_state['memory'] = param_state['memory'] + d_p - corrected_gradient
-                
+
                 d_p_1 = self.beta * d_p  + (1-self.beta)*corrected_gradient/self.rho
 
                 neta = 1/(self.P*F.norm(d_p_1) + self.Q)
+                
+                if torch.isnan(neta):
+                  neta = 1/ self.Q
                 
                 v_t_1 = p.data - neta*d_p_1
                 rand_ = self.__randomize__()
@@ -88,7 +85,7 @@ class NSGD(Optimizer):
 
     
     def __randomize__(self):
-        return torch.rand(1)
+        return torch.rand(1, device=torch.device('cuda'))
     
 
     def __compress__(self,x,input_compress_settings={}):

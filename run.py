@@ -8,20 +8,21 @@ import torch.functional as F
 import torch
 
 def train_single_step(model, Data, optimizer, c, lo, device):
-    L = 0
-    c=0
+    Lp = 0
+    count=0
     for batch in Data: 
-        batch = batch.to(device)
         x, y = batch
-        optimizer.zero_grad()
+        x = x.to(device)
+        y = y.to(device)
+        model.zero_grad()
         out  = c(model(x))
         loss = lo(out, y)
-        L+=loss.detach()
+        Lp+=loss.detach()
         loss.backward()
         optimizer.step()
-        c+=1
+        count+=1
 
-    return L/c
+    return Lp/count
 
 if __name__ == '__main__':
     model = torchvision.models.resnet18(pretrained=False)
