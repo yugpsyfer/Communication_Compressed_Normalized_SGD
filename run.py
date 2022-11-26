@@ -5,24 +5,31 @@ from torchvision.transforms import ToTensor
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.functional as F
+import torch
 
-def train_single_step(model, Data, optimizer, c, lo):
-    
-    for batch in Data:  
+def train_single_step(model, Data, optimizer, c, lo, device):
+    L = 0
+    c=0
+    for batch in Data: 
+        batch = batch.to(device)
         x, y = batch
         optimizer.zero_grad()
         out  = c(model(x))
         loss = lo(out, y)
+        L+=loss.detach()
         loss.backward()
         optimizer.step()
+        c+=1
 
+    return L/c
 
 if __name__ == '__main__':
     model = torchvision.models.resnet18(pretrained=False)
     optim = NSGD(model.parameters(), lr=0.1)
     L = nn.Softmax(dim=1)
     lo = nn.CrossEntropyLoss()
-    
+    device = torch.device('cuda')
+    model.to(device)
     training_data = datasets.CIFAR10(
         root="data",
         train=True,
@@ -40,5 +47,8 @@ if __name__ == '__main__':
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
 
-    for ep in range(100):
-        train_single_step(model, train_dataloader, optim, L, lo)
+    for ep in range(50):
+        LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
+        if ep%5==0:
+            print("========================")
+            print("LOSS ", LOSS)

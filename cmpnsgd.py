@@ -29,7 +29,7 @@ class NSGD(Optimizer):
             for group in self.param_groups:
                 for p in group['params']:
                     param_state = self.state[p]
-                    param_state['memory'] = torch.zeros_like(p.data)
+                    param_state['memory'] = torch.zeros_like(p.data, device=torch.device('cuda'))
 
         
 
@@ -53,7 +53,7 @@ class NSGD(Optimizer):
                     d_p.add_(weight_decay, p.data)
                 if momentum != 0:
                     if 'momentum_buffer' not in param_state:
-                        buf = param_state['momentum_buffer'] = torch.zeros_like(p.data)
+                        buf = param_state['momentum_buffer'] = torch.zeros_like(p.data, device=torch.device('cuda'))
                         buf.mul_(momentum).add_(d_p)
                     else:
                         buf = param_state['momentum_buffer']
@@ -105,7 +105,7 @@ class NSGD(Optimizer):
         
         abs_x=torch.abs(vec_x)
         #d=torch.prod(torch.Tensor(x.size()))
-        out=torch.min(p*d*abs_x/torch.sum(abs_x),torch.ones_like(abs_x))
+        out=torch.min(p*d*abs_x/torch.sum(abs_x),torch.ones_like(abs_x, device=torch.device('cuda')))
         i=0
         while True:
             i+=1
@@ -118,11 +118,11 @@ class NSGD(Optimizer):
             c=(p*d-d+torch.sum(cI))/torch.sum(out*cI)
             if c<=1:
                 break
-            out=torch.min(c*out,torch.ones_like(out))
-            if torch.sum(1-torch.eq(out,temp)):
+            out=torch.min(c*out,torch.ones_like(out, device=torch.device('cuda')))
+            if torch.sum(~torch.eq(out,temp)):
                 break
         
-        z=torch.rand_like(out)
+        z=torch.rand_like(out, device=torch.device('cuda'))
         out=vec_x*(z<out).float()/out
 
         out=out.reshape(x.shape)
