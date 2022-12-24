@@ -29,7 +29,7 @@ class INSGD(Optimizer):
             for group in self.param_groups:
                 for p in group['params']:
                     param_state = self.state[p]
-                    param_state['M'] = torch.zeros_like(p.data.grad, device=torch.device('cuda'))
+                    param_state['M'] = torch.zeros_like(p.data, device=torch.device('cuda'))
 
 
 
@@ -71,7 +71,7 @@ class INSGD(Optimizer):
                 neta = 1/(self.P*F.norm(param_state['M']) + self.Q)
                 
                 x_t_1 = p.data - neta*param_state['M']
-                r = self.__randomize__
+                r = self.__randomize__()
                 p.data = p.data * r + (1-r)*x_t_1
                 
                 
