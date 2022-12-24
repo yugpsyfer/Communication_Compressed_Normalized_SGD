@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.functional as F
 import torch
+from insgd import INSGD
 
 def train_single_step(model, Data, optimizer, c, lo, device):
     Lp = 0
@@ -26,7 +27,7 @@ def train_single_step(model, Data, optimizer, c, lo, device):
 
 if __name__ == '__main__':
     model = torchvision.models.resnet18(pretrained=False)
-    optim = NSGD(model.parameters(), lr=0.1)
+    optim = INSGD(model.parameters(), lr=0.1)
     L = nn.Softmax(dim=1)
     lo = nn.CrossEntropyLoss()
     device = torch.device('cuda')

@@ -2,7 +2,7 @@ import torch
 from torch.optim.optimizer import Optimizer, required
 import torch.functional as F
 
-class NSGD(Optimizer):
+class INSGD(Optimizer):
     def __init__(self, params, lr=required, momentum=0, dampening=0,
                     weight_decay=0, nesterov=False, memory=False):
             
@@ -29,10 +29,11 @@ class NSGD(Optimizer):
             for group in self.param_groups:
                 for p in group['params']:
                     param_state = self.state[p]
-                    param_state['memory'] = torch.zeros_like(p.data, device=torch.device('cuda'))
+                    param_state['M'] = torch.zeros_like(p.data.grad, device=torch.device('cuda'))
 
 
-    def step(self, epoch, closure=None):
+
+    def step(self,closure=None):
             
 
         loss = None
@@ -64,68 +65,21 @@ class NSGD(Optimizer):
                     else:
                         d_p = buf
                 
-                corrected_gradient = param_state['memory'] + d_p
-                
-                corrected_gradient = torch.nan_to_num(self.__compress__(corrected_gradient))
-                
-                param_state['memory'] = param_state['memory'] + d_p - corrected_gradient
 
-                d_p_1 = self.beta * d_p  + (1-self.beta)*corrected_gradient/self.rho
+                param_state['M'] = self.beta*param_state['M'] + (1-self.beta)*d_p
 
-                neta = 1/(self.P*F.norm(d_p_1) + self.Q)
+                neta = 1/(self.P*F.norm(param_state['M']) + self.Q)
                 
-                if torch.isnan(neta):
-                  neta = 1/ self.Q
+                x_t_1 = p.data - neta*param_state['M']
+                r = self.__randomize__
+                p.data = p.data * r + (1-r)*x_t_1
                 
-                v_t_1 = p.data - neta*d_p_1
-                rand_ = self.__randomize__()
-
-                p.data = p.data * (1-rand_) + rand_*v_t_1
-
+                
         return loss
 
     
     def __randomize__(self):
         return torch.rand(1, device=torch.device('cuda'))
     
-
-    def __compress__(self,x,input_compress_settings={}):
-        max_iteration=10000
-        compress_settings={'p':0.8}
-        compress_settings.update(input_compress_settings)
-        #p=compress_settings['p']
-        #vec_x=x.flatten()
-        #out=torch.dropout(vec_x,1-p,train=True)
-        #out=out/p
-        vec_x=x.flatten()
-        d = int(len(vec_x))
-        p=compress_settings['p']
-        
-        abs_x=torch.abs(vec_x)
-        #d=torch.prod(torch.Tensor(x.size()))
-        out=torch.min(p*d*abs_x/torch.sum(abs_x),torch.ones_like(abs_x, device=torch.device('cuda')))
-        i=0
-        while True:
-            i+=1
-            #print(i)
-            if i>=max_iteration:
-                raise ValueError('Too much operations!')
-            temp=out.detach()
-                
-            cI=1-torch.eq(out,1).float()
-            c=(p*d-d+torch.sum(cI))/torch.sum(out*cI)
-            if c<=1:
-                break
-            out=torch.min(c*out,torch.ones_like(out, device=torch.device('cuda')))
-            if torch.sum(~torch.eq(out,temp)):
-                break
-        
-        z=torch.rand_like(out, device=torch.device('cuda'))
-        out=vec_x*(z<out).float()/out
-
-        out=out.reshape(x.shape)
-
-        #out=out.reshape(x.shape)
-        return out
 
 
