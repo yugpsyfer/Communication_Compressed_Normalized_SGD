@@ -37,6 +37,7 @@ def evaluate(model, Data, criterion, device):
         x, y = batch
         x = x.to(device)
         out  = criterion(model(x))
+        out = torch.argmax(input=out, dim=-1)
         acc+=accuracy_score(y, out.cpu())
         b+=1
     
@@ -45,7 +46,7 @@ def evaluate(model, Data, criterion, device):
 def plot(vals):
     epochs = [i for i in range(1, 101)]
     
-    axes= plt.subplot(2)
+    axes= plt.subplots(2)
     
     axes[0].plot(epochs, vals['train'])
     axes[0].set_ylim(1)
@@ -65,6 +66,8 @@ def plot(vals):
 if __name__ == '__main__':
     
     model = torchvision.models.resnet18(pretrained=False)
+    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+
     optim = INSGD(model.parameters(), lr=0.1)
     L = nn.Softmax(dim=1)
     lo = nn.CrossEntropyLoss()
@@ -90,8 +93,8 @@ if __name__ == '__main__':
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
     
     insgd_optim = {'train':[], 'test':[]}
-
-    for ep in range(10):
+    print("Training started")
+    for ep in range(100):
         LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
         insgd_optim['train'].append(evaluate(model, train_dataloader, L, device))
         insgd_optim['test'].append(evaluate(model, test_dataloader, L, device))
