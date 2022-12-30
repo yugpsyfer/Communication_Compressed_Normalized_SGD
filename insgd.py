@@ -6,9 +6,9 @@ class INSGD(Optimizer):
     def __init__(self, params, lr=required, momentum=0, dampening=0,
                     weight_decay=0, nesterov=False, memory=False):
             
-            self.P = 0.9
-            self.Q = 0.1
-            self.beta = 0.5
+            self.P = 1
+            self.Q = 10
+            self.beta = 0.9
             self.rho=1
 
             if lr is not required and lr < 0.0:
