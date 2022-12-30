@@ -65,15 +65,11 @@ def plot(vals):
 
 if __name__ == '__main__':
     
-    model = torchvision.models.resnet18(pretrained=False)
-    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
-
-    optim = INSGD(model.parameters(), lr=0.1)
     L = nn.Softmax(dim=1)
     lo = nn.CrossEntropyLoss()
     
     device = torch.device('cuda')
-    model.to(device)
+  
     
     training_data = datasets.CIFAR10(
         root="data",
@@ -92,8 +88,13 @@ if __name__ == '__main__':
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
     
+    model = torchvision.models.resnet18(pretrained=False)
+    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+    model.to(device)
+    optim = INSGD(model.parameters(), lr=0.1)
+    
     insgd_optim = {'train':[], 'test':[]}
-    print("Training started")
+    print("Training started Ingd")
     for ep in range(100):
         LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
         insgd_optim['train'].append(evaluate(model, train_dataloader, L, device))
@@ -101,3 +102,34 @@ if __name__ == '__main__':
     
     plot(insgd_optim)
 
+    """TRAINING WITH ADAM"""
+
+    model = torchvision.models.resnet18(pretrained=False)
+    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+    model.to(device)
+    optim = Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, eps=1e-3)
+
+    adam_optim = {'train':[], 'test':[]}
+    print("Training started")
+    for ep in range(100):
+        LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
+        adam_optim['train'].append(evaluate(model, train_dataloader, L, device))
+        adam_optim['test'].append(evaluate(model, test_dataloader, L, device))
+    
+    plot(adam_optim)
+
+    """TRAINING WITH SGD"""
+    
+    model = torchvision.models.resnet18(pretrained=False)
+    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+    model.to(device)
+    optim = SGD(model.parameters(), lr=0.1, weight_decay=5*1e-4, momentum=0.9)
+
+    sgd_optim = {'train':[], 'test':[]}
+    print("Training started")
+    for ep in range(100):
+        LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
+        sgd_optim['train'].append(evaluate(model, train_dataloader, L, device))
+        sgd_optim['test'].append(evaluate(model, test_dataloader, L, device))
+    
+    plot(sgd_optim)
