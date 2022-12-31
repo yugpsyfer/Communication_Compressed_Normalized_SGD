@@ -9,6 +9,8 @@ from insgd import INSGD
 from torch.optim import Adam, SGD, Adadelta
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
+import wandb
+
 
 def train_single_step(model, Data, optimizer, c, lo, device):
     Lp = 0
@@ -61,7 +63,7 @@ def plot(vals):
     axes[1].set_title('Test vs Epoch')
     axes[1].set_xlabel('Accuracy')
     axes[1].set_ylabel('Epochs')
-    plt.plot()
+    plt.show()
 
 if __name__ == '__main__':
     
@@ -87,49 +89,74 @@ if __name__ == '__main__':
 
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
+
+    """TRAINING WITH INSGD"""
     
     model = torchvision.models.resnet18(pretrained=False)
     model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
     model.to(device)
     optim = INSGD(model.parameters(), lr=0.1)
     
-    insgd_optim = {'train':[], 'test':[]}
+    wandb.init(
+        project="Communication Compressed INSGD",
+        entity="yugansh",
+        name="INSGD",
+        config={"p":1,"q":10,"beta":0.9}
+    )    
+
     print("Training started Ingd")
+
     for ep in range(100):
         LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
-        insgd_optim['train'].append(evaluate(model, train_dataloader, L, device))
-        insgd_optim['test'].append(evaluate(model, test_dataloader, L, device))
-    
-    plot(insgd_optim)
+        accu_train = evaluate(model, train_dataloader, L, device)
+        accu_test = evaluate(model, test_dataloader, L, device)
+        wandb.log({"Training Accuracy": accu_train,
+                        "Test Accracy": accu_test})   
+
 
     """TRAINING WITH ADAM"""
+
+    wandb.init(
+        project="Communication Compressed INSGD",
+        entity="yugansh",
+        name="ADAM",
+        config={"lr":0.0001,"weight_decay":1e-6,"eps":1e-3}
+    )  
 
     model = torchvision.models.resnet18(pretrained=False)
     model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
     model.to(device)
     optim = Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, eps=1e-3)
 
-    adam_optim = {'train':[], 'test':[]}
-    print("Training started")
+
+    print("Training started for ADAM")
     for ep in range(100):
         LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
-        adam_optim['train'].append(evaluate(model, train_dataloader, L, device))
-        adam_optim['test'].append(evaluate(model, test_dataloader, L, device))
-    
-    plot(adam_optim)
+        accu_train = evaluate(model, train_dataloader, L, device)
+        accu_test = evaluate(model, test_dataloader, L, device)
+        
+        wandb.log({"Training Accuracy": accu_train,
+                        "Test Accracy": accu_test})
+
 
     """TRAINING WITH SGD"""
-    
+    wandb.init(
+        project="Communication Compressed INSGD",
+        entity="yugansh",
+        name="SGD_mom",
+        config={"lr":0.1,"weight_decay":5*1e-4,"momentum":0.9}
+    ) 
+
     model = torchvision.models.resnet18(pretrained=False)
     model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
     model.to(device)
     optim = SGD(model.parameters(), lr=0.1, weight_decay=5*1e-4, momentum=0.9)
 
-    sgd_optim = {'train':[], 'test':[]}
-    print("Training started")
+    print("Training started for SGD")
     for ep in range(100):
         LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
-        sgd_optim['train'].append(evaluate(model, train_dataloader, L, device))
-        sgd_optim['test'].append(evaluate(model, test_dataloader, L, device))
+        accu_train = evaluate(model, train_dataloader, L, device)
+        accu_test = evaluate(model, test_dataloader, L, device)
+        wandb.log({"Training Accuracy": accu_train,
+                        "Test Accracy": accu_test}) 
     
-    plot(sgd_optim)
