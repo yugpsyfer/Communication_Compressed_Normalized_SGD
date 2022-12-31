@@ -45,25 +45,74 @@ def evaluate(model, Data, criterion, device):
     
     return acc/b
 
-def plot(vals):
-    epochs = [i for i in range(1, 101)]
-    
-    axes= plt.subplots(2)
-    
-    axes[0].plot(epochs, vals['train'])
-    axes[0].set_ylim(1)
-    axes[0].set_xlim(100)
-    axes[0].set_title('Train vs Epoch')
-    axes[0].set_xlabel('Accuracy')
-    axes[0].set_ylabel('Epochs')
-    
-    axes[1].plot(epochs, vals['test'])
-    axes[1].set_ylim(1)
-    axes[1].set_xlim(100)
-    axes[1].set_title('Test vs Epoch')
-    axes[1].set_xlabel('Accuracy')
-    axes[1].set_ylabel('Epochs')
-    plt.show()
+def train(t):
+    if t=='insgd':
+      model = torchvision.models.resnet18(pretrained=False)
+      model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+      model.to(device)
+      optim = INSGD(model.parameters(), lr=0.1)
+      
+      wandb.init(
+          project="Communication Compressed INSGD",
+          entity="yugansh",
+          name="INSGD",
+          config={"p":1,"q":10,"beta":0.9}
+      )    
+
+      print("Training started Ingd")
+
+      for ep in range(100):
+          LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
+          accu_train = evaluate(model, train_dataloader, L, device)
+          accu_test = evaluate(model, test_dataloader, L, device)
+          wandb.log({"Training Accuracy": accu_train,
+                          "Test Accracy": accu_test})
+    elif t=='adam':
+      """TRAINING WITH ADAM"""
+
+      wandb.init(
+          project="Communication Compressed INSGD",
+          entity="yugansh",
+          name="ADAM",
+          config={"lr":0.0001,"weight_decay":1e-6,"eps":1e-3}
+      )  
+
+      model = torchvision.models.resnet18(pretrained=False)
+      model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+      model.to(device)
+      optim = Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, eps=1e-3)
+
+
+      print("Training started for ADAM")
+      for ep in range(100):
+          LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
+          accu_train = evaluate(model, train_dataloader, L, device)
+          accu_test = evaluate(model, test_dataloader, L, device)
+          
+          wandb.log({"Training Accuracy": accu_train,
+                          "Test Accracy": accu_test})
+    else:
+      """TRAINING WITH SGD"""
+      wandb.init(
+          project="Communication Compressed INSGD",
+          entity="yugansh",
+          name="SGD_mom",
+          config={"lr":0.1,"weight_decay":5*1e-4,"momentum":0.9}
+      ) 
+
+      model = torchvision.models.resnet18(pretrained=False)
+      model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+      model.to(device)
+      optim = SGD(model.parameters(), lr=0.1, weight_decay=5*1e-4, momentum=0.9)
+
+      print("Training started for SGD")
+      for ep in range(100):
+          LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
+          accu_train = evaluate(model, train_dataloader, L, device)
+          accu_test = evaluate(model, test_dataloader, L, device)
+          wandb.log({"Training Accuracy": accu_train,
+                          "Test Accracy": accu_test}) 
+
 
 if __name__ == '__main__':
     
@@ -90,73 +139,6 @@ if __name__ == '__main__':
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
 
-    """TRAINING WITH INSGD"""
+    train('adam')
     
-    model = torchvision.models.resnet18(pretrained=False)
-    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
-    model.to(device)
-    optim = INSGD(model.parameters(), lr=0.1)
-    
-    wandb.init(
-        project="Communication Compressed INSGD",
-        entity="yugansh",
-        name="INSGD",
-        config={"p":1,"q":10,"beta":0.9}
-    )    
-
-    print("Training started Ingd")
-
-    for ep in range(100):
-        LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
-        accu_train = evaluate(model, train_dataloader, L, device)
-        accu_test = evaluate(model, test_dataloader, L, device)
-        wandb.log({"Training Accuracy": accu_train,
-                        "Test Accracy": accu_test})   
-
-
-    """TRAINING WITH ADAM"""
-
-    wandb.init(
-        project="Communication Compressed INSGD",
-        entity="yugansh",
-        name="ADAM",
-        config={"lr":0.0001,"weight_decay":1e-6,"eps":1e-3}
-    )  
-
-    model = torchvision.models.resnet18(pretrained=False)
-    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
-    model.to(device)
-    optim = Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, eps=1e-3)
-
-
-    print("Training started for ADAM")
-    for ep in range(100):
-        LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
-        accu_train = evaluate(model, train_dataloader, L, device)
-        accu_test = evaluate(model, test_dataloader, L, device)
-        
-        wandb.log({"Training Accuracy": accu_train,
-                        "Test Accracy": accu_test})
-
-
-    """TRAINING WITH SGD"""
-    wandb.init(
-        project="Communication Compressed INSGD",
-        entity="yugansh",
-        name="SGD_mom",
-        config={"lr":0.1,"weight_decay":5*1e-4,"momentum":0.9}
-    ) 
-
-    model = torchvision.models.resnet18(pretrained=False)
-    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
-    model.to(device)
-    optim = SGD(model.parameters(), lr=0.1, weight_decay=5*1e-4, momentum=0.9)
-
-    print("Training started for SGD")
-    for ep in range(100):
-        LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
-        accu_train = evaluate(model, train_dataloader, L, device)
-        accu_test = evaluate(model, test_dataloader, L, device)
-        wandb.log({"Training Accuracy": accu_train,
-                        "Test Accracy": accu_test}) 
     
