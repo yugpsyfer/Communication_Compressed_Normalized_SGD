@@ -34,6 +34,7 @@ class CNSGD():
 
                 corrected_grad, groups['memory'][par] = self.correct_gradients(grad, groups['memory'][par]) #worker
                 
+                dist.barrier()
                 corrected_grad = dist.all_reduce(corrected_grad)
 
                 m_t = Beta * m_prev  + (1-Beta)*corrected_grad/Rho

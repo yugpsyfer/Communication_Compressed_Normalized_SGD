@@ -8,7 +8,6 @@ import torch
 from insgd import INSGD
 from torch.optim import Adam, SGD, Adadelta
 from sklearn.metrics import accuracy_score
-import matplotlib.pyplot as plt
 import wandb
 
 
