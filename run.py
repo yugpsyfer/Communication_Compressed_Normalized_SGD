@@ -45,7 +45,7 @@ def evaluate(model, Data, criterion, device):
     
     return acc/b
 
-def train(t):
+def train_insgd(t):
     if t=='insgd':
       model = torchvision.models.resnet18(pretrained=False)
       model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
@@ -114,6 +114,22 @@ def train(t):
                           "Test Accracy": accu_test}) 
 
 
+def train_cmpnsgd():
+    model = torchvision.models.resnet18(pretrained=False)
+    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+    model.to(device)
+    optim = NSGD(model.parameters(), lr=0.1)
+
+    print("Training started for CMPNSGD")
+    
+    for ep in range(10):
+        LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
+        print(LOSS)
+        # accu_train = evaluate(model, train_dataloader, L, device)
+        # accu_test = evaluate(model, test_dataloader, L, device)
+        # wandb.log({"Training Accuracy": accu_train,
+        #                 "Test Accracy": accu_test}) 
+
 if __name__ == '__main__':
     
     L = nn.Softmax(dim=1)
@@ -139,6 +155,7 @@ if __name__ == '__main__':
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
 
-    train('adam')
+    # train_insgd('adam')
+    train_cmpnsgd()
     
     
