@@ -9,7 +9,7 @@ from insgd import INSGD
 from torch.optim import Adam, SGD, Adadelta
 from sklearn.metrics import accuracy_score
 import wandb
-
+from resnet import resnet
 
 def train_single_step(model, Data, optimizer, c, lo, device):
     Lp = 0
@@ -46,15 +46,15 @@ def evaluate(model, Data, criterion, device):
 
 def train_insgd(t):
     if t=='insgd':
-      model = torchvision.models.resnet18(pretrained=False)
-      model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+      model =  resnet('cifar10', 20)      #torchvision.models.resnet18(pretrained=False)
+    #   model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
       model.to(device)
       optim = INSGD(model.parameters(), lr=0.1)
-      
+
       wandb.init(
           project="Communication Compressed INSGD",
           entity="yugansh",
-          name="INSGD",
+          name="INSGD-final",
           config={"p":1,"q":10,"beta":0.9}
       )    
 
@@ -62,10 +62,11 @@ def train_insgd(t):
 
       for ep in range(100):
           LOSS = train_single_step(model, train_dataloader, optim, L, lo, device)
-          accu_train = evaluate(model, train_dataloader, L, device)
-          accu_test = evaluate(model, test_dataloader, L, device)
-          wandb.log({"Training Accuracy": accu_train,
-                          "Test Accracy": accu_test})
+          if ep%5==0:
+            accu_train = evaluate(model, train_dataloader, L, device)
+            accu_test = evaluate(model, test_dataloader, L, device)
+            wandb.log({"Training Accuracy": accu_train,
+                            "Test Accracy": accu_test})
     elif t=='adam':
       """TRAINING WITH ADAM"""
 
@@ -76,8 +77,8 @@ def train_insgd(t):
           config={"lr":0.0001,"weight_decay":1e-6,"eps":1e-3}
       )  
 
-      model = torchvision.models.resnet18(pretrained=False)
-      model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+      model =  resnet('cifar10', 20)
+    #   model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
       model.to(device)
       optim = Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, eps=1e-3)
 
@@ -99,8 +100,8 @@ def train_insgd(t):
           config={"lr":0.1,"weight_decay":5*1e-4,"momentum":0.9}
       ) 
 
-      model = torchvision.models.resnet18(pretrained=False)
-      model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+      model =  resnet('cifar10', 20)
+    #   model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
       model.to(device)
       optim = SGD(model.parameters(), lr=0.1, weight_decay=5*1e-4, momentum=0.9)
 
@@ -154,7 +155,7 @@ if __name__ == '__main__':
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
 
-    # train_insgd('adam')
-    train_cmpnsgd()
+    train_insgd('insgd')
+    # train_cmpnsgd()
     
     

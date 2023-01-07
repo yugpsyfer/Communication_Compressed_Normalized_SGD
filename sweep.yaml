@@ -1,0 +1,7 @@
+program: rnn.py
+method: "grid"
+parameters:
+  learning_rate:
+    values: [1e-5, 1e-4]
+  beta:
+    values: [1e-10, 1e-8, 1e-9]
