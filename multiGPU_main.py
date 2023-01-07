@@ -15,16 +15,17 @@ from resnet import resnet
 def allocate_process_to_GPU(local_rank, args):
      
     world_rank =  local_rank % args['world_size']
-    p=4
-    q=20 
-    beta=0.9
+    p=args["p"]
+    q=args["q"]
+    beta=args["beta"]
+    compression_method = args["compression_method"]
 
     if world_rank == 0:
         wandb.init(
-          project="Communication Compressed INSGD",
-          entity="yugansh",
-          name="MultiGPU-CMPNSGD-one_bit",
-          config={"p":p,"q":q,"beta":beta,"Rho":args['world_size']}
+          project=args["project_name"],                             #Project name
+          entity=args["entity_name"],                               #Entity Name
+          name=args["run_name"],                                    #Current run name
+          config={"p":p,"q":q,"beta":beta,"Rho":args['world_size']} #Run configurations
       ) 
     
     dist.init_process_group(backend=args["backend"],
@@ -46,11 +47,10 @@ def allocate_process_to_GPU(local_rank, args):
      q=q, 
      beta=beta,
      rho=args["world_size"], 
-     compression_method='one_bit')
+     compression_method=compression_method)
     
     for epoch in range(args["epochs"]):
         l = train_single_epoch(model, trainLoader, criterion, optimizer)
-        # print("WORLD RANK: {} LOSS: {}".format(world_rank,l))
 
         if epoch%5 == 0: 
             model = average_models(model, world_size=args["world_size"])
@@ -58,7 +58,8 @@ def allocate_process_to_GPU(local_rank, args):
             if world_rank == 0:
                 accu_train = evaluate(model=model, testLoader=trainLoader)
                 accu_test = evaluate(model=model, testLoader=testLoader)
-
+                
+                #Remove this call if you want to run w/o WANDB
                 update_wandb_logs(loss=l,  
                 accu_train=accu_train, 
                 accu_test=accu_test)
@@ -68,11 +69,8 @@ def allocate_process_to_GPU(local_rank, args):
                 dist.barrier()
 
 
-def update_wandb_logs(loss, accu_train, accu_test):
-
-    # print("Train Accuracy: {} || Test Accuracy: {} || LOSS: {}".format(accu_train, accu_test, loss))
-    
-    wandb.log({"Training Accuracy": accu_train, "Test Accracy": accu_test, "Loss":loss})
+def update_wandb_logs(loss, accu_train, accu_test):    
+    wandb.log({"Training Accuracy": accu_train, "Test Accuracy": accu_test, "Loss":loss})
 
 
 def average_models(model, world_size):
@@ -86,7 +84,6 @@ def average_models(model, world_size):
     return model
 
     
-
 def train_single_epoch(model, trainLoader, criterion, optimizer):
     batch_count = 0
     total_loss = 0
@@ -164,7 +161,16 @@ def run():
     nprocs = torch.cuda.device_count()
     trainLoader, testLoader =  prepare_data()
     barrier = mp.Barrier(nprocs)
-  
+    
+    #Wandb Params
+    project_name = ""
+    entity_name = ""
+    name = ""
+
+    #Algorithm Hyperparams
+    p=4
+    q=20 
+    beta=0.9
 
     args=[{
         "world_size":nprocs,
@@ -174,7 +180,14 @@ def run():
         "epochs":100,
         "trainLoader":trainLoader,
         "testLoader":testLoader,
-        "barrier": barrier
+        "barrier": barrier,
+        "p":p,
+        "q":q,
+        "beta":beta,
+        "compression_method":"one_bit",
+        "project_name":project_name,
+        "entity_name":entity_name,
+        "name":name
 
     }]
     

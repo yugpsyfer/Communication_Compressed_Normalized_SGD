@@ -8,12 +8,10 @@ class CNSGD():
     def __init__(self, params, p=1, q=10, beta=0.9, rho=1, compression_method="quantize"):
         """
         Default values have been taken from the paper https://arxiv.org/pdf/2002.04130.pdf
-        Rho is number of workers
-        By default I am taking a single parameter group
+        Rho is number of workers -Total number of GPUs
         compression_method: ['quantize', 'one_bit', 'sparse_top_k', 'sparse_randomized']
         """
         self.param_groups = []
-        self.eta = 0
 
         if compression_method == "quantize":
             self.compress = self.quantize
@@ -55,13 +53,10 @@ class CNSGD():
 
                 m_t = Beta * m_prev  + (1-Beta)*corrected_grad/Rho
                 groups['M'][par] = m_t    
-                
                 eta = 1/(P*F.norm(m_t) + Q)
-                self.eta = eta
+
                 v_t = groups['params'][par].data - eta*m_t
-                
                 rand_ = self.randomize()
-                
                 groups['params'][par].data = groups['params'][par].data * (1-rand_) + rand_*v_t
 
 
@@ -113,7 +108,7 @@ class CNSGD():
         #print(x.shape)
         return out_x
 
-    def sparse_randomized(self, x,input_compress_settings={}):
+    def sparse_randomized(self, x,input_compress_settings={}):      #Avoid this one
         max_iteration=10000
         compress_settings={'p':0.8}
         compress_settings.update(input_compress_settings)

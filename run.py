@@ -1,12 +1,12 @@
-import torchvision
-from cmpnsgd import NSGD
+# import torchvision
+# from cmpnsgd import NSGD
 from torchvision import datasets
 from torchvision.transforms import ToTensor
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch
 from insgd import INSGD
-from torch.optim import Adam, SGD, Adadelta
+from torch.optim import Adam, SGD
 from sklearn.metrics import accuracy_score
 import wandb
 from resnet import resnet
@@ -46,14 +46,13 @@ def evaluate(model, Data, criterion, device):
 
 def train_insgd(t):
     if t=='insgd':
-      model =  resnet('cifar10', 20)      #torchvision.models.resnet18(pretrained=False)
-    #   model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+      model =  resnet('cifar10', 20)  
       model.to(device)
       optim = INSGD(model.parameters(), lr=0.1)
 
       wandb.init(
           project="Communication Compressed INSGD",
-          entity="yugansh",
+          entity="",
           name="INSGD-final",
           config={"p":1,"q":10,"beta":0.9}
       )    
@@ -72,13 +71,12 @@ def train_insgd(t):
 
       wandb.init(
           project="Communication Compressed INSGD",
-          entity="yugansh",
+          entity="",
           name="ADAM",
           config={"lr":0.0001,"weight_decay":1e-6,"eps":1e-3}
       )  
 
       model =  resnet('cifar10', 20)
-    #   model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
       model.to(device)
       optim = Adam(model.parameters(), lr=0.0001, weight_decay=1e-6, eps=1e-3)
 
@@ -95,13 +93,12 @@ def train_insgd(t):
       """TRAINING WITH SGD"""
       wandb.init(
           project="Communication Compressed INSGD",
-          entity="yugansh",
+          entity="",
           name="SGD_mom",
           config={"lr":0.1,"weight_decay":5*1e-4,"momentum":0.9}
       ) 
 
       model =  resnet('cifar10', 20)
-    #   model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
       model.to(device)
       optim = SGD(model.parameters(), lr=0.1, weight_decay=5*1e-4, momentum=0.9)
 
@@ -114,9 +111,9 @@ def train_insgd(t):
                           "Test Accracy": accu_test}) 
 
 
-def train_cmpnsgd():
-    model = torchvision.models.resnet18(pretrained=False)
-    model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
+"""def train_cmpnsgd():
+    model =  resnet('cifar10', 20)
+    # model.fc = nn.Linear(512,10)  #10 classes in CIFAR10
     model.to(device)
     optim = NSGD(model.parameters(), lr=0.1)
 
@@ -129,12 +126,12 @@ def train_cmpnsgd():
         # accu_test = evaluate(model, test_dataloader, L, device)
         # wandb.log({"Training Accuracy": accu_train,
         #                 "Test Accracy": accu_test}) 
+"""
 
 if __name__ == '__main__':
     
     L = nn.Softmax(dim=1)
     lo = nn.CrossEntropyLoss()
-    
     device = torch.device('cuda')
   
     
@@ -154,7 +151,7 @@ if __name__ == '__main__':
 
     train_dataloader = DataLoader(training_data, batch_size=64, shuffle=True)
     test_dataloader = DataLoader(test_data, batch_size=64, shuffle=True)
-
+    
     train_insgd('insgd')
     # train_cmpnsgd()
     
